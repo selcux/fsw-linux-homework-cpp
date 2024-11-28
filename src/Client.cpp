@@ -38,7 +38,7 @@ Result<void> Client::connect_tcp() {
         addr.sin_port = htons(port);
         addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-        if (connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) <
+        if (connect(sock, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) <
             0) {
             return ClientError::make_error(
                 ClientError::Code::ConnectFailed,
@@ -51,7 +51,7 @@ Result<void> Client::connect_tcp() {
             return set_result.error();
         }
 
-        tcp_sockets.insert(sock);
+        tcp_sockets.emplace_back(sock);
     }
 
     return Result<void>::success();
@@ -108,6 +108,9 @@ Result<void> Client::setup_epoll() {
         }
     }
 
+    // Create received_data as the same size with tcp_sockets
+    received_data.resize(tcp_sockets.size());
+
     return Result<void>::success();
 }
 
@@ -137,10 +140,11 @@ Result<void> Client::run_and_receive() {
 
                 if (bytes_read > 0) {
                     // Find which socket this is
-                    for (auto socket : tcp_sockets) {
-                        if (socket == events[i].data.fd) {
-                            std::cout << "Socket " << socket << " -> " << buffer
-                                      << std::endl;
+                    for (auto j = 0; j < tcp_sockets.size(); ++j) {
+                        if (tcp_sockets[j] == events[i].data.fd) {
+                            received_data[j] = buffer;
+                            std::cout << j << ". " << tcp_sockets[j] << ": "
+                                      << received_data[j] << std::endl;
                             break;
                         }
                     }
@@ -150,4 +154,20 @@ Result<void> Client::run_and_receive() {
     }
 
     return Result<void>::success();
+}
+
+void Client::print_json(int64_t timestamp,
+                        const std::vector<std::string> &data) {
+    // Join data into comma separated string
+    // with fields as out1, out2, out3, ...
+    std::string data_str;
+    for (size_t i = 0; i < data.size(); ++i) {
+        data_str += "out" + std::to_string(i + 1) + ": " + data[i];
+        if (i < data.size() - 1) {
+            data_str += ", ";
+        }
+    }
+
+    std::cout << "{\"timestamp\": " << timestamp << ", " << data_str << "}"
+              << std::endl;
 }
