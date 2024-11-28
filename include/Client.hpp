@@ -8,7 +8,7 @@ class Client {
    public:
     ~Client();
 
-    Result<Client> create();
+    static Result<Client> create();
 
     void add_tcp_port(int port);
 

@@ -4,8 +4,13 @@
 #include <netinet/in.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
-Client::~Client() {}
+Client::~Client() {
+    if (epoll_fd >= 0) {
+        close(epoll_fd);
+    }
+}
 
 Result<Client> Client::create() {
     try {
@@ -29,7 +34,7 @@ Result<Client> Client::create() {
 void Client::add_tcp_port(int port) { tcp_ports.insert(port); }
 
 Result<void> Client::connect_tcp() {
-    const auto sock_result = this->create_socket();
+    auto sock_result = this->create_socket();
     if (sock_result.has_error()) {
         return sock_result.error();
     }
