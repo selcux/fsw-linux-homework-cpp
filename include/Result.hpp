@@ -34,6 +34,8 @@ class Result<void, E> {
 
     const E& error() const { return std::get<E>(variant); }
 
+    static const std::monostate success() { return std::monostate{}; }
+
    protected:
     std::variant<std::monostate, E> variant;
 };
