@@ -1,5 +1,5 @@
-#ifndef CLIENTERROR_H
-#define CLIENTERROR_H
+#ifndef CLIENTERROR_HPP
+#define CLIENTERROR_HPP
 #include <exception>
 #include <iostream>
 #include <string>
@@ -70,4 +70,4 @@ class ClientError : public ::std::exception {
     }
 };
 
-#endif  // CLIENTERROR_H
+#endif  // CLIENTERROR_HPP
