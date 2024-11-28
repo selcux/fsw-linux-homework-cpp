@@ -20,7 +20,7 @@ class Client {
 
     Result<void> run_and_receive();
 
-   private:
+   protected:
     static constexpr int MAX_EVENTS = 10;
     static constexpr int BUFFER_SIZE = 256;
     static constexpr int PRINT_INTERVAL_MS = 100;

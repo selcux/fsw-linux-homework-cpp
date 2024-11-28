@@ -17,4 +17,5 @@ add_executable(client1
 
 add_executable(client2
         src/client2.cpp
-        ${COMMON_SOURCES})
+        ${COMMON_SOURCES}
+        src/ClientControl.cpp)
