@@ -23,6 +23,7 @@ class Client {
    private:
     static constexpr int MAX_EVENTS = 10;
     static constexpr int BUFFER_SIZE = 256;
+    static constexpr int PRINT_INTERVAL_MS = 100;
 
     int epoll_fd;
     std::set<int> tcp_ports;

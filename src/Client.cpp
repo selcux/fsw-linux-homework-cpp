@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstring>
@@ -126,10 +127,18 @@ Result<void> Client::run_and_receive() {
 
     // Wait for the first data before starting timer
     bool first_data_received = false;
-    auto last_print = std::chrono::steady_clock::now();
+    auto next_print = std::chrono::steady_clock::now();
 
     while (running) {
-        int num_events = epoll_wait(epoll_fd, events.data(), MAX_EVENTS, 1000);
+        auto now = std::chrono::steady_clock::now();
+
+        auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           next_print - now)
+                           .count();
+        timeout = std::max(1L, timeout);
+
+        int num_events =
+            epoll_wait(epoll_fd, events.data(), MAX_EVENTS, timeout);
 
         if (num_events < 0) {
             // Handle interrupted system call
@@ -168,8 +177,8 @@ Result<void> Client::run_and_receive() {
             continue;
         }
 
-        const auto now = std::chrono::steady_clock::now();
-        if (now - last_print >= std::chrono::milliseconds(100)) {
+        now = std::chrono::steady_clock::now();
+        if (now >= next_print) {
             // Get the current timestamp in milliseconds
             const auto ms =
                 std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -180,7 +189,13 @@ Result<void> Client::run_and_receive() {
 
             reset_data();
 
-            last_print = now;
+            // Calculate next print time based on the previous target
+            next_print += std::chrono::milliseconds(PRINT_INTERVAL_MS);
+
+            // If we've fallen behind, catch up to current time
+            if (now > next_print) {
+                next_print = now;
+            }
         }
     }
 
