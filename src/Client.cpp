@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <array>
+#include <chrono>
 #include <cstring>
 #include <string>
 
@@ -110,6 +111,7 @@ Result<void> Client::setup_epoll() {
 
     // Create received_data as the same size with tcp_sockets
     received_data.resize(tcp_sockets.size());
+    reset_data();  // Reset received_data
 
     return Result<void>::success();
 }
@@ -118,6 +120,10 @@ Result<void> Client::run_and_receive() {
     std::array<epoll_event, MAX_EVENTS> events;
     char buffer[BUFFER_SIZE];
     running = true;
+
+    // Wait for the first data before starting timer
+    bool first_data_received = false;
+    auto last_print = std::chrono::steady_clock::now();
 
     while (running) {
         int num_events = epoll_wait(epoll_fd, events.data(), MAX_EVENTS, 1000);
@@ -139,21 +145,47 @@ Result<void> Client::run_and_receive() {
                     read(events[i].data.fd, buffer, BUFFER_SIZE - 1);
 
                 if (bytes_read > 0) {
+                    first_data_received = true;
                     // Find which socket this is
                     for (auto j = 0; j < tcp_sockets.size(); ++j) {
                         if (tcp_sockets[j] == events[i].data.fd) {
+                            // Remove the newline if present
+                            if (buffer[bytes_read - 1] == '\n') {
+                                buffer[bytes_read - 1] = '\0';
+                            }
                             received_data[j] = buffer;
-                            std::cout << j << ". " << tcp_sockets[j] << ": "
-                                      << received_data[j] << std::endl;
                             break;
                         }
                     }
                 }
             }
         }
+
+        if (!first_data_received) {
+            continue;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+        if (now - last_print >= std::chrono::milliseconds(100)) {
+            // Get the current timestamp in milliseconds
+            const auto ms =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch())
+                    .count();
+
+            Client::print_json(ms, received_data);
+
+            reset_data();
+
+            last_print = now;
+        }
     }
 
     return Result<void>::success();
+}
+
+void Client::reset_data() {
+    std::fill(received_data.begin(), received_data.end(), "--");
 }
 
 void Client::print_json(int64_t timestamp,
@@ -162,7 +194,7 @@ void Client::print_json(int64_t timestamp,
     // with fields as out1, out2, out3, ...
     std::string data_str;
     for (size_t i = 0; i < data.size(); ++i) {
-        data_str += "out" + std::to_string(i + 1) + ": " + data[i];
+        data_str += "\"out" + std::to_string(i + 1) + "\": \"" + data[i] + "\"";
         if (i < data.size() - 1) {
             data_str += ", ";
         }

@@ -33,6 +33,8 @@ class Client {
 
     Result<void> set_flags(int fd, int flag);
 
+    void reset_data();
+
     static void print_json(int64_t timestamp,
                            const std::vector<std::string> &received_data);
 };
