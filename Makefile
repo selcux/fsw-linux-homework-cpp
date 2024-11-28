@@ -1,41 +1,25 @@
-# Compiler settings
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -I include
+# Define the build directory
+BUILD_DIR = ./build
 
-# Directories
-SRC_DIR = src
-BUILD_DIR = build
-
-# Source files
-SRCS = $(SRC_DIR)/client1.cpp
-
-# Object files
-OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o)
-
-# Executables
-TARGET = $(BUILD_DIR)/client1
+# Define the target executable name
+TARGET = fsw_linux_homework_cpp
 
 # Default target
-all: prepare $(TARGET)
+all: build
 
-# Prepare build directory
-prepare:
+# Build target
+build:
 	@mkdir -p $(BUILD_DIR)
+	@cmake -S . -B $(BUILD_DIR)
+	@cmake --build $(BUILD_DIR)
 
-# Compile source files
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+# Run target
+run: $(BUILD_DIR)/$(TARGET)
+	@./$(BUILD_DIR)/$(TARGET)
 
-# Link the main executable
-$(TARGET): $(OBJS)
-	$(CXX) $(OBJS) -o $(TARGET)
-
-# Run the main program
-run: all
-	./$(TARGET)
-
-# Clean build files
+# Clean target
 clean:
-	rm -rf $(BUILD_DIR)
+	@rm -rf $(BUILD_DIR)
 
-.PHONY: all prepare run clean
+# Phony targets
+.PHONY: all build clean run

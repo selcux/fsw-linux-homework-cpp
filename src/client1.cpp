@@ -16,6 +16,7 @@ int main() {
         conn_result.has_error()) {
         std::cerr << "Failed to connect to port: " << conn_result.error()
                   << std::endl;
+        return -1;
     }
 
     std::cout << "Connection successful" << std::endl;
