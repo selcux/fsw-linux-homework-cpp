@@ -1,5 +1,6 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
+#include <atomic>
 #include <set>
 #include <vector>
 
@@ -7,7 +8,7 @@
 
 class Client {
    public:
-    Client() = default;
+    static Result<Client> create();
 
     ~Client();
 
@@ -24,10 +25,15 @@ class Client {
     static constexpr int BUFFER_SIZE = 256;
 
     int epoll_fd;
-    bool running;
     std::set<int> tcp_ports;
     std::vector<int> tcp_sockets;
     std::vector<std::string> received_data;
+
+    // Signal handling
+    static std::atomic<bool> running;
+    static void signal_handler(int signal);
+
+    Client() = default;
 
     Result<int> create_socket();
 
@@ -37,6 +43,10 @@ class Client {
 
     static void print_json(int64_t timestamp,
                            const std::vector<std::string> &received_data);
+
+    static Result<void> setup_signal_handling();
+
+    void cleanup();
 };
 
 #endif  // CLIENT_HPP

@@ -2,6 +2,7 @@
 
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <signal.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -11,22 +12,25 @@
 #include <cstring>
 #include <string>
 
-Client::~Client() {
-    for (auto socket : tcp_sockets) {
-        close(socket);
+std::atomic<bool> Client::running(true);
+
+void Client::signal_handler(int signal) { running = false; }
+
+Result<Client> Client::create() {
+    if (const auto setup_result = setup_signal_handling();
+        setup_result.has_error()) {
+        return setup_result.error();
     }
 
-    if (epoll_fd >= 0) {
-        close(epoll_fd);
-    }
+    return Client{};
 }
+
+Client::~Client() { cleanup(); }
 
 void Client::add_tcp_port(int port) { tcp_ports.insert(port); }
 
 Result<void> Client::connect_tcp() {
     for (const auto port : tcp_ports) {
-        std::cout << "Connecting to port: " << port << std::endl;
-
         auto sock_result = create_socket();
         if (sock_result.has_error()) {
             return sock_result.error();
@@ -119,7 +123,6 @@ Result<void> Client::setup_epoll() {
 Result<void> Client::run_and_receive() {
     std::array<epoll_event, MAX_EVENTS> events;
     char buffer[BUFFER_SIZE];
-    running = true;
 
     // Wait for the first data before starting timer
     bool first_data_received = false;
@@ -181,6 +184,8 @@ Result<void> Client::run_and_receive() {
         }
     }
 
+    cleanup();
+
     return Result<void>::success();
 }
 
@@ -202,4 +207,34 @@ void Client::print_json(int64_t timestamp,
 
     std::cout << "{\"timestamp\": " << timestamp << ", " << data_str << "}"
               << std::endl;
+}
+
+Result<void> Client::setup_signal_handling() {
+    struct sigaction sa {};
+    sa.sa_handler = Client::signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    if (sigaction(SIGINT, &sa, nullptr) < 0 ||
+        sigaction(SIGTERM, &sa, nullptr) < 0) {
+        return ClientError::make_error(
+            ClientError::Code::SignalHandlingSetupFailed,
+            "Failed to set up signal handling");
+    }
+
+    return Result<void>::success();
+}
+
+void Client::cleanup() {
+    // Close all TCP sockets
+    for (auto socket : tcp_sockets) {
+        close(socket);
+    }
+    tcp_sockets.clear();
+
+    // Close epoll fd
+    if (epoll_fd >= 0) {
+        close(epoll_fd);
+        epoll_fd = -1;
+    }
 }

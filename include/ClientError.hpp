@@ -14,6 +14,7 @@ class ClientError : public ::std::exception {
         ConnectFailed,
         EpollCreationFailed,
         EpollWaitFailed,
+        SignalHandlingSetupFailed,
         // ReadError,
         // WriteError
     };

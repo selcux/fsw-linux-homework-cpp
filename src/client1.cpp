@@ -2,7 +2,15 @@
 #include <iostream>
 
 int main() {
-    Client client{};
+    auto client_result = Client::create();
+    if (client_result.has_error()) {
+        std::cerr << "Failed to create client: " << client_result.error()
+                  << std::endl;
+        return -1;
+    }
+
+    auto client = client_result.value();
+
     client.add_tcp_port(4001);
     client.add_tcp_port(4002);
     client.add_tcp_port(4003);
