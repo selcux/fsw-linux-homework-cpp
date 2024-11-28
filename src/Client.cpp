@@ -6,6 +6,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <array>
+#include <cstring>
+#include <string>
+
 Client::~Client() {
     for (auto socket : tcp_sockets) {
         close(socket);
@@ -101,6 +105,47 @@ Result<void> Client::setup_epoll() {
             ClientError::make_error(ClientError::Code::EpollCreationFailed,
                                     "Socket " + std::to_string(socket) +
                                         " failed to be added to epoll.");
+        }
+    }
+
+    return Result<void>::success();
+}
+
+Result<void> Client::run_and_receive() {
+    std::array<epoll_event, MAX_EVENTS> events;
+    char buffer[BUFFER_SIZE];
+    running = true;
+
+    while (running) {
+        int num_events = epoll_wait(epoll_fd, events.data(), MAX_EVENTS, 1000);
+
+        if (num_events < 0) {
+            // Handle interrupted system call
+            if (errno == EINTR) {
+                continue;  // Restart if interrupted by a signal
+            }
+
+            return ClientError::make_error(ClientError::Code::EpollWaitFailed,
+                                           "Failed waiting for events");
+        }
+
+        for (int i = 0; i < num_events; ++i) {
+            if (events[i].events & EPOLLIN) {
+                std::memset(buffer, 0, BUFFER_SIZE);
+                int bytes_read =
+                    read(events[i].data.fd, buffer, BUFFER_SIZE - 1);
+
+                if (bytes_read > 0) {
+                    // Find which socket this is
+                    for (auto socket : tcp_sockets) {
+                        if (socket == events[i].data.fd) {
+                            std::cout << "Socket " << socket << " -> " << buffer
+                                      << std::endl;
+                            break;
+                        }
+                    }
+                }
+            }
         }
     }
 

@@ -16,10 +16,16 @@ class Client {
 
     Result<void> setup_epoll();
 
+    Result<void> run_and_receive();
+
    private:
+    static constexpr int MAX_EVENTS = 10;
+    static constexpr int BUFFER_SIZE = 256;
+
     std::set<int> tcp_ports;
     int epoll_fd;
     std::set<int> tcp_sockets;
+    bool running;
 
     Result<int> create_socket();
 

@@ -13,6 +13,7 @@ class ClientError : public ::std::exception {
         SetFlagsFailed,
         ConnectFailed,
         EpollCreationFailed,
+        EpollWaitFailed,
         // ReadError,
         // WriteError
     };
