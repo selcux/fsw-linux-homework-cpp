@@ -98,7 +98,7 @@ Result<void> Client::setup_epoll() {
 
     for (auto socket : tcp_sockets) {
         epoll_event event{};
-        event.events = EPOLLIN | EPOLLET;
+        event.events = EPOLLIN;
         event.data.fd = socket;
 
         if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket, &event) < 0) {
