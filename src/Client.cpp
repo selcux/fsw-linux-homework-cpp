@@ -7,42 +7,27 @@
 #include <unistd.h>
 
 Client::~Client() {
+    for (auto socket : tcp_sockets) {
+        close(socket);
+    }
+
     if (epoll_fd >= 0) {
         close(epoll_fd);
-    }
-}
-
-Result<Client> Client::create() {
-    try {
-        Client client{};
-
-        client.epoll_fd = epoll_create1(0);
-        if (client.epoll_fd < 0) {
-            return ClientError::make_error(
-                ClientError::Code::EpollCreationFailed,
-                "epoll_create1() failed with errno: " + std::to_string(errno));
-        }
-
-        return client;
-    } catch (const std::exception& e) {
-        return ClientError::make_error(
-            ClientError::Code::Unknown,
-            std::string("Unexpected error: ") + e.what());
     }
 }
 
 void Client::add_tcp_port(int port) { tcp_ports.insert(port); }
 
 Result<void> Client::connect_tcp() {
-    auto sock_result = this->create_socket();
-    if (sock_result.has_error()) {
-        return sock_result.error();
-    }
-
-    const int sock = sock_result.value();
-
     for (const auto port : tcp_ports) {
         std::cout << "Connecting to port: " << port << std::endl;
+
+        auto sock_result = create_socket();
+        if (sock_result.has_error()) {
+            return sock_result.error();
+        }
+
+        const int sock = sock_result.value();
 
         sockaddr_in addr{};
         addr.sin_family = AF_INET;
@@ -55,7 +40,11 @@ Result<void> Client::connect_tcp() {
                 ClientError::Code::ConnectFailed,
                 "Connecting to port " + std::to_string(port) + " failed.");
         }
+
+        tcp_sockets.insert(sock);
     }
+
+    return Result<void>::success();
 }
 
 Result<int> Client::create_socket() {
@@ -82,4 +71,27 @@ Result<int> Client::create_socket() {
     }
 
     return sock;
+}
+
+Result<void> Client::setup_epoll() {
+    epoll_fd = epoll_create1(0);
+    if (epoll_fd < 0) {
+        return ClientError::make_error(
+            ClientError::Code::EpollCreationFailed,
+            "epoll_create1() failed with errno: " + std::to_string(errno));
+    }
+
+    for (auto socket : tcp_sockets) {
+        epoll_event event{};
+        event.events = EPOLLIN | EPOLLET;
+        event.data.fd = socket;
+
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket, &event) < 0) {
+            ClientError::make_error(ClientError::Code::EpollCreationFailed,
+                                    "Socket " + std::to_string(socket) +
+                                        " failed to be added to epoll.");
+        }
+    }
+
+    return Result<void>::success();
 }

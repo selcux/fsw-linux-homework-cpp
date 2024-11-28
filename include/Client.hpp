@@ -6,19 +6,20 @@
 
 class Client {
    public:
-    ~Client();
+    Client() = default;
 
-    static Result<Client> create();
+    ~Client();
 
     void add_tcp_port(int port);
 
     Result<void> connect_tcp();
 
+    Result<void> setup_epoll();
+
    private:
     std::set<int> tcp_ports;
     int epoll_fd;
-
-    Client() = default;
+    std::set<int> tcp_sockets;
 
     Result<int> create_socket();
 };
