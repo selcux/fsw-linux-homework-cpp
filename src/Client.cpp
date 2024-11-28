@@ -41,6 +41,12 @@ Result<void> Client::connect_tcp() {
                 "Connecting to port " + std::to_string(port) + " failed.");
         }
 
+        // Set non-blocking
+        if (const auto set_result = set_flags(sock, O_NONBLOCK);
+            set_result.has_error()) {
+            return set_result.error();
+        }
+
         tcp_sockets.insert(sock);
     }
 
@@ -55,22 +61,27 @@ Result<int> Client::create_socket() {
             "socket() failed with errno: " + std::to_string(errno));
     }
 
-    // Set non-blocking
-    int flags = fcntl(sock, F_GETFL);
+    return sock;
+}
+
+Result<void> Client::set_flags(int fd, int flag) {
+    int flags = fcntl(fd, F_GETFL);
     if (flags == -1) {
         return ClientError::make_error(
             ClientError::Code::GetFlagsFailed,
-            "Could not get socket flags with errno: " + std::to_string(errno));
+            "Could not get the flags of the file descriptor " +
+                std::to_string(fd));
     }
 
-    flags |= O_NONBLOCK;
-    if (fcntl(sock, F_SETFL, flags) == -1) {
+    flags |= flag;
+    if (fcntl(fd, F_SETFL, flags) == -1) {
         return ClientError::make_error(
             ClientError::Code::SetFlagsFailed,
-            "Could not set socket flags with errno: " + std::to_string(errno));
+            "Could not set the flags of the file descriptor " +
+                std::to_string(fd));
     }
 
-    return sock;
+    return Result<void>::success();
 }
 
 Result<void> Client::setup_epoll() {

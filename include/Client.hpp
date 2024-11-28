@@ -22,6 +22,8 @@ class Client {
     std::set<int> tcp_sockets;
 
     Result<int> create_socket();
+
+    Result<void> set_flags(int fd, int flag);
 };
 
 #endif  // CLIENT_HPP
