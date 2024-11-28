@@ -4,9 +4,6 @@
 
 #include "ClientError.hpp"
 
-// using ResultVoidErr = std::variant<void, ClientError>;
-// using ResultIntErr = std::variant<int, ClientError>;
-
 template <typename T, typename E = ClientError>
 class Result {
    public:
