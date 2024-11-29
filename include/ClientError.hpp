@@ -15,8 +15,7 @@ class ClientError : public ::std::exception {
         EpollCreationFailed,
         EpollWaitFailed,
         SignalHandlingSetupFailed,
-        // ReadError,
-        // WriteError
+        DataConversionFailed,
     };
 
     ClientError(const Code code, std::string message, const int errno_code)
