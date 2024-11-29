@@ -23,7 +23,6 @@ class Client {
 
    protected:
     static constexpr int MAX_EVENTS = 10;
-    static constexpr int BUFFER_SIZE = 256;
     static constexpr int PRINT_INTERVAL_MS = 100;
 
     int epoll_fd;
@@ -39,7 +38,7 @@ class Client {
 
     Client() = default;
 
-    Result<int> create_socket();
+    Result<int> create_tcp_socket();
 
     Result<void> set_flags(int fd, int flag);
 

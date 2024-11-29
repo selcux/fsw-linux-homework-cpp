@@ -32,7 +32,7 @@ void Client::add_tcp_port(int port) { tcp_ports.insert(port); }
 
 Result<void> Client::connect_tcp() {
     for (const auto port : tcp_ports) {
-        auto sock_result = create_socket();
+        auto sock_result = create_tcp_socket();
         if (sock_result.has_error()) {
             return sock_result.error();
         }
@@ -63,12 +63,12 @@ Result<void> Client::connect_tcp() {
     return Result<void>::success();
 }
 
-Result<int> Client::create_socket() {
+Result<int> Client::create_tcp_socket() {
     const auto sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         return ClientError::make_error(
             ClientError::Code::SocketCreationFailed,
-            "socket() failed with errno: " + std::to_string(errno));
+            "create_tcp_socket() failed with errno: " + std::to_string(errno));
     }
 
     return sock;
@@ -122,6 +122,8 @@ Result<void> Client::setup_epoll() {
 }
 
 Result<void> Client::run_and_receive() {
+    constexpr int BUFFER_SIZE = 256;
+
     std::array<epoll_event, MAX_EVENTS> events;
     char buffer[BUFFER_SIZE];
 
@@ -152,7 +154,7 @@ Result<void> Client::run_and_receive() {
 
         for (int i = 0; i < num_events; ++i) {
             if (events[i].events & EPOLLIN) {
-                std::memset(buffer, 0, BUFFER_SIZE);
+                std::fill_n(buffer, BUFFER_SIZE, 0);
                 int bytes_read =
                     read(events[i].data.fd, buffer, BUFFER_SIZE - 1);
 
