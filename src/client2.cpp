@@ -9,7 +9,6 @@ int main() {
     }
 
     auto client = client_result.value();
-
     client.add_tcp_port(4001);
     client.add_tcp_port(4002);
     client.add_tcp_port(4003);

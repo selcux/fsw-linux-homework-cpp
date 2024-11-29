@@ -49,7 +49,7 @@ class Client {
 
     static Result<void> setup_signal_handling();
 
-    void cleanup();
+    virtual void cleanup();
 };
 
 #endif  // CLIENT_HPP

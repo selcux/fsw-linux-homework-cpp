@@ -2,6 +2,7 @@
 
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include <cstring>
 
@@ -13,12 +14,21 @@ Result<ClientControl> ClientControl::create() {
 
     auto client_control = ClientControl{};
 
+    auto socket_result = client_control.create_udp_socket();
+    if (socket_result.has_error()) {
+        return socket_result.error();
+    }
+
+    client_control.control_socket = socket_result.value();
+
     client_control.on_receive =
         std::bind(&ClientControl::on_receive_data, &client_control,
                   std::placeholders::_1, std::placeholders::_2);
 
     return std::move(client_control);
 }
+
+ClientControl::~ClientControl() { cleanup(); }
 
 void ClientControl::set_control_port(int port) { control_port = port; }
 
@@ -70,6 +80,8 @@ Result<void> ClientControl::on_receive_data(int socket_index,
         return send_result.error();
     }
 
+    std::cout << "Data sent successfully." << std::endl;
+
     return Result<void>::success();
 }
 
@@ -92,13 +104,6 @@ Result<void> ClientControl::send_data(uint16_t property, uint16_t value) {
     constexpr uint16_t WRITE_OP = 2;  // Write operation code
     constexpr uint16_t OBJ1 = 1;      // Object 1 code
 
-    auto sock_result = create_udp_socket();
-    if (sock_result.has_error()) {
-        return sock_result.error();
-    }
-
-    const auto sock = sock_result.value();
-
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(control_port);
@@ -117,8 +122,23 @@ Result<void> ClientControl::send_data(uint16_t property, uint16_t value) {
     }
 
     const auto send_result =
-        sendto(sock, buffer, BUFFER_SIZE, 0, reinterpret_cast<sockaddr*>(&addr),
-               sizeof(addr));
+        sendto(control_socket, buffer, BUFFER_SIZE, 0,
+               reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+
+    if (send_result < 0) {
+        return ClientError::make_error(
+            ClientError::Code::DataTransmissionFailed,
+            "Failed to sending data: " + std::to_string(property) + " = " +
+                std::to_string(value));
+    }
 
     return Result<void>::success();
+}
+
+void ClientControl::cleanup() {
+    Client::cleanup();
+
+    if (control_socket >= 0) {
+        close(control_socket);
+    }
 }
