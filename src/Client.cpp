@@ -165,7 +165,17 @@ Result<void> Client::run_and_receive() {
                             if (buffer[bytes_read - 1] == '\n') {
                                 buffer[bytes_read - 1] = '\0';
                             }
-                            received_data[j] = buffer;
+                            std::string str_buffer(buffer);
+
+                            received_data[j] = str_buffer;
+
+                            if (on_receive) {
+                                const auto recv_result =
+                                    on_receive(j, str_buffer);
+                                if (recv_result.has_error()) {
+                                    return recv_result.error();
+                                }
+                            }
                             break;
                         }
                     }

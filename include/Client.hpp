@@ -1,6 +1,7 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 #include <atomic>
+#include <functional>
 #include <set>
 #include <vector>
 
@@ -33,6 +34,8 @@ class Client {
     // Signal handling
     static std::atomic<bool> running;
     static void signal_handler(int signal);
+
+    std::function<Result<void>(const int, const std::string &)> on_receive;
 
     Client() = default;
 
