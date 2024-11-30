@@ -2,7 +2,6 @@
 
 #include <fcntl.h>
 #include <netinet/in.h>
-#include <signal.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -10,12 +9,13 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <csignal>
 #include <cstring>
 #include <string>
 
 std::atomic<bool> Client::running(true);
 
-void Client::signal_handler(int signal) { running = false; }
+void Client::signal_handler(int) { running = false; }
 
 Result<Client> Client::create() {
     if (const auto setup_result = setup_signal_handling();
@@ -26,7 +26,7 @@ Result<Client> Client::create() {
     return Client{};
 }
 
-Client::~Client() { cleanup(); }
+Client::~Client() { Client::cleanup(); }
 
 void Client::add_tcp_port(int port) { tcp_ports.insert(port); }
 
@@ -63,6 +63,13 @@ Result<void> Client::connect_tcp() {
     return Result<void>::success();
 }
 
+int Client::get_interval() const { return 100; }
+
+Result<void> Client::on_receive(const int socket_index,
+                                const std::string &data) {
+    return Result<void>::success();
+}
+
 Result<int> Client::create_tcp_socket() {
     const auto sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
@@ -74,7 +81,7 @@ Result<int> Client::create_tcp_socket() {
     return sock;
 }
 
-Result<void> Client::set_flags(int fd, int flag) {
+Result<void> Client::set_flags(const int fd, const int flag) {
     int flags = fcntl(fd, F_GETFL);
     if (flags == -1) {
         return ClientError::make_error(
@@ -102,7 +109,7 @@ Result<void> Client::setup_epoll() {
             "epoll_create1() failed with errno: " + std::to_string(errno));
     }
 
-    for (auto socket : tcp_sockets) {
+    for (const auto socket : tcp_sockets) {
         epoll_event event{};
         event.events = EPOLLIN;
         event.data.fd = socket;
@@ -124,7 +131,7 @@ Result<void> Client::setup_epoll() {
 Result<void> Client::run_and_receive() {
     constexpr int BUFFER_SIZE = 256;
 
-    std::array<epoll_event, MAX_EVENTS> events;
+    std::array<epoll_event, MAX_EVENTS> events{};
     char buffer[BUFFER_SIZE];
 
     // Wait for the first data before starting timer
@@ -155,7 +162,7 @@ Result<void> Client::run_and_receive() {
         for (int i = 0; i < num_events; ++i) {
             if (events[i].events & EPOLLIN) {
                 std::fill_n(buffer, BUFFER_SIZE, 0);
-                int bytes_read =
+                const int bytes_read =
                     read(events[i].data.fd, buffer, BUFFER_SIZE - 1);
 
                 if (bytes_read > 0) {
@@ -171,12 +178,10 @@ Result<void> Client::run_and_receive() {
 
                             received_data[j] = str_buffer;
 
-                            if (on_receive) {
-                                const auto recv_result =
+                            if (const auto recv_result =
                                     on_receive(j, str_buffer);
-                                if (recv_result.has_error()) {
-                                    return recv_result.error();
-                                }
+                                recv_result.has_error()) {
+                                return recv_result.error();
                             }
                             break;
                         }
@@ -197,12 +202,12 @@ Result<void> Client::run_and_receive() {
                     std::chrono::steady_clock::now().time_since_epoch())
                     .count();
 
-            Client::print_json(ms, received_data);
+            print_json(ms, received_data);
 
             reset_data();
 
             // Calculate next print time based on the previous target
-            next_print += std::chrono::milliseconds(PRINT_INTERVAL_MS);
+            next_print += std::chrono::milliseconds(get_interval());
 
             // If we've fallen behind, catch up to current time
             if (now > next_print) {
@@ -238,7 +243,7 @@ void Client::print_json(int64_t timestamp,
 
 Result<void> Client::setup_signal_handling() {
     struct sigaction sa {};
-    sa.sa_handler = Client::signal_handler;
+    sa.sa_handler = signal_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
 
@@ -254,7 +259,7 @@ Result<void> Client::setup_signal_handling() {
 
 void Client::cleanup() {
     // Close all TCP sockets
-    for (auto socket : tcp_sockets) {
+    for (const auto socket : tcp_sockets) {
         close(socket);
     }
     tcp_sockets.clear();

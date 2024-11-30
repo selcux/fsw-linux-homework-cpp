@@ -1,7 +1,6 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 #include <atomic>
-#include <functional>
 #include <set>
 #include <vector>
 
@@ -23,7 +22,6 @@ class Client {
 
    protected:
     static constexpr int MAX_EVENTS = 10;
-    static constexpr int PRINT_INTERVAL_MS = 100;
 
     int epoll_fd;
     std::set<int> tcp_ports;
@@ -32,15 +30,17 @@ class Client {
 
     // Signal handling
     static std::atomic<bool> running;
-    static void signal_handler(int signal);
-
-    std::function<Result<void>(const int, const std::string &)> on_receive;
+    static void signal_handler(int);
 
     Client() = default;
 
-    Result<int> create_tcp_socket();
+    virtual int get_interval() const;
 
-    Result<void> set_flags(int fd, int flag);
+    virtual Result<void> on_receive(int socket_index, const std::string &data);
+
+    static Result<int> create_tcp_socket();
+
+    static Result<void> set_flags(int fd, int flag);
 
     void reset_data();
 

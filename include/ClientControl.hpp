@@ -1,6 +1,5 @@
 #ifndef CLIENT_CONTROL_HPP
 #define CLIENT_CONTROL_HPP
-#include <optional>
 #include <utility>
 
 #include "Client.hpp"
@@ -12,28 +11,24 @@ class ClientControl : public Client {
 
     static Result<ClientControl> create();
 
-    ~ClientControl();
-
     void set_control_port(int port);
 
-    Result<void> send_data(uint16_t property, uint16_t value);
+    Result<void> send_data(uint16_t property, uint16_t value) const;
 
    protected:
-    static constexpr int PRINT_INTERVAL_MS = 20;
     static constexpr int OUTPUT3_INDEX = 2;
 
     int control_port = 4000;
-    int control_socket;
 
     ClientControl();
 
-    std::pair<uint16_t, uint16_t> compute_behavior(float out3_value);
+    int get_interval() const override;
 
-    Result<void> on_receive_data(int socket_index, const std::string &data);
+    Result<void> on_receive(int socket_index, const std::string &data) override;
 
-    Result<int> create_udp_socket();
+    static std::pair<uint16_t, uint16_t> compute_behavior(float out3_value);
 
-    virtual void cleanup() override;
+    static Result<int> create_udp_socket();
 };
 
 #endif  // CLIENT_CONTROL_HPP
