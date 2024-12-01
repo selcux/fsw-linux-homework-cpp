@@ -1,7 +1,6 @@
 #include "ClientControl.hpp"
 
 #include <arpa/inet.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -84,7 +83,7 @@ Result<int> ClientControl::create_udp_socket() {
     return sock;
 }
 
-Result<void> ClientControl::send_data(uint16_t property, uint16_t value) const {
+Result<void> ClientControl::send_data(uint16_t property, uint16_t value) {
     // Each write message consists of four fields
     constexpr int FIELD_COUNT = 4;
     constexpr int FIELD_LEN = sizeof(uint16_t);
@@ -92,14 +91,11 @@ Result<void> ClientControl::send_data(uint16_t property, uint16_t value) const {
     constexpr uint16_t WRITE_OP = 2;  // Write operation code
     constexpr uint16_t OBJ1 = 1;      // Object 1 code
 
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(control_port);
-    if (inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr) <= 0) {
-        return ClientError::make_error(
-            ClientError::Code::DataTransmissionFailed,
-            "Failed to convert IP address: " + std::to_string(errno));
+    auto addr_result = get_server_sockaddr(control_port);
+    if (addr_result.has_error()) {
+        return addr_result.error();
     }
+    auto addr = addr_result.value();
 
     auto socket_result = create_udp_socket();
     if (socket_result.has_error()) {

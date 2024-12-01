@@ -1,13 +1,18 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
+#include <netinet/in.h>
+
 #include <atomic>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "Result.hpp"
 
 class Client {
    public:
+    static constexpr auto DEFAULT_SERVER_ADDR = "127.0.0.1";
+
     static Result<Client> create();
 
     ~Client();
@@ -20,10 +25,13 @@ class Client {
 
     Result<void> run_and_receive();
 
+    void set_server_addr(std::string addr);
+
    protected:
     static constexpr int MAX_EVENTS = 10;
 
     int epoll_fd;
+    std::string server_addr;
     std::set<int> tcp_ports;
     std::vector<int> tcp_sockets;
     std::vector<std::string> received_data;
@@ -50,6 +58,8 @@ class Client {
     static Result<void> setup_signal_handling();
 
     virtual void cleanup();
+
+    Result<sockaddr_in> get_server_sockaddr(int port);
 };
 
 #endif  // CLIENT_HPP

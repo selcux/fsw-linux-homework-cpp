@@ -13,7 +13,7 @@ class ClientControl : public Client {
 
     void set_control_port(int port);
 
-    Result<void> send_data(uint16_t property, uint16_t value) const;
+    Result<void> send_data(uint16_t property, uint16_t value);
 
    protected:
     static constexpr int OUTPUT3_INDEX = 2;

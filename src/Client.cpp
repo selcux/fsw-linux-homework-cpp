@@ -1,5 +1,6 @@
 #include "Client.hpp"
 
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/epoll.h>
@@ -10,7 +11,6 @@
 #include <array>
 #include <chrono>
 #include <csignal>
-#include <cstring>
 #include <string>
 
 std::atomic<bool> Client::running(true);
@@ -39,10 +39,12 @@ Result<void> Client::connect_tcp() {
 
         const int sock = sock_result.value();
 
-        sockaddr_in addr{};
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(port);
-        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        auto addr_result = get_server_sockaddr(port);
+        if (addr_result.has_error()) {
+            return addr_result.error();
+        }
+
+        auto addr = addr_result.value();
 
         if (connect(sock, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) <
             0) {
@@ -221,6 +223,8 @@ Result<void> Client::run_and_receive() {
     return Result<void>::success();
 }
 
+void Client::set_server_addr(std::string addr) { server_addr = addr; }
+
 void Client::reset_data() {
     std::fill(received_data.begin(), received_data.end(), "--");
 }
@@ -269,4 +273,22 @@ void Client::cleanup() {
         close(epoll_fd);
         epoll_fd = -1;
     }
+}
+
+Result<sockaddr_in> Client::get_server_sockaddr(const int port) {
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+
+    if (server_addr.empty()) {
+        set_server_addr(DEFAULT_SERVER_ADDR);
+    }
+
+    if (inet_pton(AF_INET, server_addr.c_str(), &addr.sin_addr) <= 0) {
+        return ClientError::make_error(
+            ClientError::Code::InvalidAddress,
+            "Invalid address for server: " + server_addr);
+    }
+
+    return addr;
 }

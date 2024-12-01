@@ -18,6 +18,7 @@ class ClientError : public ::std::exception {
         DataConversionFailed,
         DataTransmissionFailed,
         SocketCloseFailed,
+        InvalidAddress,
     };
 
     ClientError(const Code code, std::string message, const int errno_code)
