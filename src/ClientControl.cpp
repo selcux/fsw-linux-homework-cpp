@@ -14,9 +14,7 @@ Result<ClientControl> ClientControl::create() {
         return setup_result.error();
     }
 
-    auto client_control = ClientControl{};
-
-    return std::move(client_control);
+    return ClientControl{};
 }
 
 void ClientControl::set_control_port(int port) { control_port = port; }

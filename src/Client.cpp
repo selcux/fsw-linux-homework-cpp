@@ -130,7 +130,7 @@ Result<void> Client::setup_epoll() {
     return Result<void>::success();
 }
 
-Result<void> Client::run_and_receive() {
+Result<void> Client::listen_and_receive() {
     constexpr int BUFFER_SIZE = 256;
 
     std::array<epoll_event, MAX_EVENTS> events{};
@@ -224,6 +224,23 @@ Result<void> Client::run_and_receive() {
 }
 
 void Client::set_server_addr(std::string addr) { server_addr = addr; }
+
+Result<void> Client::run() {
+    if (const auto conn_result = connect_tcp(); conn_result.has_error()) {
+        return conn_result.error();
+    }
+
+    if (const auto epoll_result = setup_epoll(); epoll_result.has_error()) {
+        return epoll_result.error();
+    }
+
+    if (const auto event_loop_result = listen_and_receive();
+        event_loop_result.has_error()) {
+        return event_loop_result.error();
+    }
+
+    return Result<void>::success();
+}
 
 void Client::reset_data() {
     std::fill(received_data.begin(), received_data.end(), "--");

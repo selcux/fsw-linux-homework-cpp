@@ -23,9 +23,11 @@ class Client {
 
     Result<void> setup_epoll();
 
-    Result<void> run_and_receive();
+    Result<void> listen_and_receive();
 
     void set_server_addr(std::string addr);
+
+    Result<void> run();
 
    protected:
     static constexpr int MAX_EVENTS = 10;
