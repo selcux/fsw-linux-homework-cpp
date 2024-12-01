@@ -13,6 +13,8 @@ class Client {
    public:
     static constexpr auto DEFAULT_SERVER_ADDR = "127.0.0.1";
 
+    int interval_ms = 100;
+
     static Result<Client> create();
 
     ~Client();
@@ -43,8 +45,6 @@ class Client {
     static void signal_handler(int);
 
     Client() = default;
-
-    virtual int get_interval() const;
 
     virtual Result<void> on_receive(int socket_index, const std::string &data);
 

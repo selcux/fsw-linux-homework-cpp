@@ -14,14 +14,15 @@ Result<ClientControl> ClientControl::create() {
         return setup_result.error();
     }
 
-    return ClientControl{};
+    ClientControl client_control{};
+    client_control.interval_ms = 20;
+
+    return std::move(client_control);
 }
 
 void ClientControl::set_control_port(int port) { control_port = port; }
 
 ClientControl::ClientControl() : Client() {}
-
-int ClientControl::get_interval() const { return 20; }
 
 std::pair<uint16_t, uint16_t> ClientControl::compute_behavior(
     const float out3_value) {

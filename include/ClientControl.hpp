@@ -22,8 +22,6 @@ class ClientControl : public Client {
 
     ClientControl();
 
-    int get_interval() const override;
-
     Result<void> on_receive(int socket_index, const std::string &data) override;
 
     static std::pair<uint16_t, uint16_t> compute_behavior(float out3_value);

@@ -65,8 +65,6 @@ Result<void> Client::connect_tcp() {
     return Result<void>::success();
 }
 
-int Client::get_interval() const { return 100; }
-
 Result<void> Client::on_receive(const int socket_index,
                                 const std::string &data) {
     return Result<void>::success();
@@ -209,7 +207,7 @@ Result<void> Client::listen_and_receive() {
             reset_data();
 
             // Calculate next print time based on the previous target
-            next_print += std::chrono::milliseconds(get_interval());
+            next_print += std::chrono::milliseconds(interval_ms);
 
             // If we've fallen behind, catch up to current time
             if (now > next_print) {
