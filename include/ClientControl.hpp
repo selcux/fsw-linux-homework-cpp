@@ -15,9 +15,11 @@ class ClientControl : public Client {
 
     Result<void> send_data(uint16_t property, uint16_t value);
 
-   protected:
-    static constexpr int OUTPUT3_INDEX = 2;
+    void set_behavior_trigger_index(int index);
 
+   protected:
+    // static constexpr int OUTPUT3_INDEX = 2;
+    int behavior_trigger_index;
     int control_port = 4000;
 
     ClientControl();

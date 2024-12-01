@@ -20,6 +20,10 @@ int main() {
     client.add_tcp_port(4002);
     client.add_tcp_port(4003);
 
+    // Configures output3 (index 2) as the signal
+    // that triggers server behavior changes
+    client.set_behavior_trigger_index(2);
+
     if (const auto run_result = client.run(); run_result.has_error()) {
         std::cerr << "Failed to run client: " << run_result.error()
                   << std::endl;

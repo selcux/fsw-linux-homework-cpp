@@ -13,8 +13,6 @@ class Client {
    public:
     static constexpr auto DEFAULT_SERVER_ADDR = "127.0.0.1";
 
-    int interval_ms = 100;
-
     static Result<Client> create();
 
     ~Client();
@@ -31,6 +29,8 @@ class Client {
 
     Result<void> run();
 
+    void set_interval_ms(int ms);
+
    protected:
     static constexpr int MAX_EVENTS = 10;
 
@@ -39,6 +39,7 @@ class Client {
     std::set<int> tcp_ports;
     std::vector<int> tcp_sockets;
     std::vector<std::string> received_data;
+    int interval_ms = 100;
 
     // Signal handling
     static std::atomic<bool> running;

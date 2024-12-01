@@ -36,7 +36,7 @@ std::pair<uint16_t, uint16_t> ClientControl::compute_behavior(
 Result<void> ClientControl::on_receive(const int socket_index,
                                        const std::string& data) {
     // Only output 3 is essential
-    if (socket_index != OUTPUT3_INDEX) {
+    if (socket_index != behavior_trigger_index) {
         return Result<void>::success();
     }
 
@@ -135,4 +135,8 @@ Result<void> ClientControl::send_data(uint16_t property, uint16_t value) {
     }
 
     return Result<void>::success();
+}
+
+void ClientControl::set_behavior_trigger_index(int index) {
+    behavior_trigger_index = index;
 }

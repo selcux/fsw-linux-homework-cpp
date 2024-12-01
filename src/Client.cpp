@@ -240,6 +240,8 @@ Result<void> Client::run() {
     return Result<void>::success();
 }
 
+void Client::set_interval_ms(int ms) { interval_ms = ms; }
+
 void Client::reset_data() {
     std::fill(received_data.begin(), received_data.end(), "--");
 }
