@@ -34,41 +34,109 @@ make clean
 
 ## Running
 
-The client application can be run with:
+The client applications can be run with:
 
 ```bash
-./build/client
+# client1
+./build/client1
+# client2
+./build/client2
 ```
 
 Or, if using the Makefile:
 
 ```bash
-make run
+# client1
+make run-client1
+# client2
+make run-client2
 ```
+
+> [!NOTE]
+> You can use `SERVER_ADDR` to specify a different server IP address (default is `127.0.0.1`).
+> For example:
+> `SERVER_ADDR=192.168.1.100 make run-client1` # or client2
 
 ## Implementation Details
 
-### Client Implementation
+### Client1 Implementation
 
-The client application connects to three TCP server ports (4001, 4002, 4003) and processes their output. Here's how it works:
+Client1 is a straightforward TCP client that connects to three server ports (4001, 4002, and 4003) and displays the received data in JSON format at regular 100ms intervals. Here's how it works:
 
-1. Connection Phase:
-   - The client establishes separate TCP socket connections to each port
-   - Each connection is verified before proceeding
-   - If any connection fails, the client provides detailed error information and exits gracefully
+1. **Initialization**:
+   - Creates a Client instance with proper signal handling (SIGINT, SIGTERM)
+   - Configures server address (defaults to 127.0.0.1 if SERVER_ADDR env variable not set)
+   - Adds three TCP ports (4001, 4002, 4003) to monitor
 
-2. Data Collection:
-   - Data is read continuously from all three ports in parallel
-   - A 100ms time window is used to collect data from each port
-   - For each port, only the most recent value within the time window is kept
-   - If no data arrives during a time window, that port's value is marked as "--"
+2. **Connection Setup**:
+   - Establishes non-blocking TCP connections to all configured ports
+   - Creates an epoll instance for efficient I/O multiplexing
+   - Initializes data structures for storing received data
 
-3. Output Generation:
-   - Every 100ms, the client generates a JSON formatted output
-   - The output includes a timestamp (milliseconds since Unix epoch)
-   - Values from all three ports are included, whether they received data or not
-   - The output is written to standard output (stdout)
-   - Each JSON object is written on a new line
+3. **Main Processing Loop**:
+   - Uses epoll to monitor all TCP sockets for incoming data
+   - When data arrives:
+     - Reads the data into a buffer
+     - Removes trailing newlines
+     - Stores the data in corresponding socket's position
+   - Every 100ms:
+     - Prints a JSON object containing:
+       - Current timestamp (in milliseconds)
+       - Values from all three ports (out1, out2, out3)
+     - Resets data buffer with "--" placeholders
+
+4. **Error Handling**:
+   - Comprehensive error checking at each step (socket creation, connection, epoll operations)
+   - Returns specific error codes and messages for different failure scenarios
+   - Proper cleanup of resources on exit
+
+### Client2 Implementation
+
+Client2 extends Client1's functionality by adding control capabilities based on the data received. It monitors the same three TCP ports but implements additional logic to control frequency and amplitude via UDP commands.
+
+1. **Key Differences from Client1**:
+   - Shorter sampling interval (20ms instead of 100ms)
+   - Adds UDP control communication on port 4000
+   - Implements behavior control logic based on output3 values
+
+2. **Control Logic**:
+   - Monitors output3 (port 4003) for value changes
+   - Implements threshold-based behavior:
+
+     ```cpp
+     When output3 < 3.0:
+       frequency = 1000
+       amplitude = 8000
+     When output3 ≥ 3.0:
+       frequency = 2000
+       amplitude = 4000
+     ```
+
+3. **UDP Command Protocol**:
+   - Sends 8-byte control messages containing:
+     - Write operation code (2)
+     - Object identifier (1)
+     - Property code:
+       - 0xFF for frequency
+       - 0xAA for amplitude
+     - Value to set
+   - All values are sent in network byte order (big-endian)
+   - Each property change requires a separate UDP message
+
+4. **Real-time Processing**:
+   - Immediately processes output3 changes
+   - Sends UDP control messages without blocking
+   - Uses non-blocking sockets for both TCP and UDP
+   - Creates a new UDP socket for each control message to avoid state management
+
+5. **Error Handling Additions**:
+   - UDP-specific error handling
+   - Data conversion error handling for output3 values
+   - Network byte order conversion checks
+   - Socket cleanup after each UDP transmission
+
+> [!NOTE]
+> The frequency values sent to the server assume that 1Hz equals 1000 and 2Hz equals 2000 in the server's interpretation of the control messages.
 
 ## Server Output Analysis
 
