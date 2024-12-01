@@ -12,6 +12,12 @@ int main() {
 
     auto client = client_result.value();
 
+    // Get SERVER_ADDR env variable
+    const char* server_addr = std::getenv("SERVER_ADDR");
+    if (server_addr != nullptr) {
+        client.set_server_addr(server_addr);
+    }
+
     client.add_tcp_port(4001);
     client.add_tcp_port(4002);
     client.add_tcp_port(4003);
